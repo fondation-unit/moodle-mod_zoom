@@ -476,10 +476,10 @@ function zoom_get_user_id($required = true) {
         $zoomuserid = false;
         $service = new mod_zoom_webservice();
         try {
-            $zoomuser = $service->get_user(zoom_get_api_identifier($USER));
-            if ($zoomuser !== false && isset($zoomuser->id) && ($zoomuser->id !== false)) {
+            $email = get_allowed_email($USER->email);
+            $zoomuser = $service->get_user($email);
+            if ($zoomuser !== false) {
                 $zoomuserid = $zoomuser->id;
-                $cache->set($USER->id, $zoomuserid);
             }
         } catch (moodle_exception $error) {
             if ($required) {
@@ -1254,4 +1254,29 @@ function zoom_get_meeting_recordings_grouped($zoomid) {
         $recordings[$recording->meetinguuid][] = $recording;
     }
     return $recordings;
+}
+
+function get_allowed_email($useremail) {
+    $config = get_config('mod_zoom');
+    for($i = 1; $i < 11; $i++) {
+        $group = preg_split('/\r\n|[\r\n]/', $config->{"group".$i."_users"});
+        if (in_array($useremail, $group)) {
+            return $config->{"group".$i."_mail"};
+        }
+    }
+
+    return false;
+}
+
+function is_available($start_time, $duration, $userid) {
+    global $DB;
+
+    $starttime = $start_time - 900;
+    $endtime = $start_time + $duration + 900;
+    $others = $DB->count_records_sql('SELECT COUNT(*) FROM {zoom} WHERE user_id <> ? AND start_time BETWEEN ? AND ? ;', array($userid, $starttime, $endtime));
+    
+    if ($others > 3) {
+        return false;
+    }
+    return true;
 }
