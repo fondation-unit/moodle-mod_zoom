@@ -350,4 +350,21 @@ if ($ADMIN->fulltree) {
         $settings->hide_if('zoom/invitation_invite', 'zoom/invitationremoveinvite', 'eq', 0);
         $settings->hide_if('zoom/invitation_icallink', 'zoom/invitationremoveicallink', 'eq', 0);
     }
+
+    // Orchestration settings.
+    $settings->add(new admin_setting_heading('orchestration_settings',
+        get_string('orchestration_settings', 'mod_zoom'),
+        get_string('orchestration_settings', 'mod_zoom')));
+
+    for($i = 1; $i < 11; $i++) {
+        $group_text = new admin_setting_configtext('mod_zoom/group'.$i.'_mail',
+                get_string('group'.$i.'_mail', 'mod_zoom'),
+                null, '', PARAM_TEXT);
+        $settings->add($group_text);
+
+        $group = new admin_setting_configtextarea('mod_zoom/group'.$i.'_users',
+            get_string('group'.$i.'_users', 'mod_zoom'),
+            null, '', PARAM_RAW);
+        $settings->add($group);
+    }
 }

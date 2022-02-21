@@ -216,6 +216,21 @@ if (!$showrecreate) {
         // Get unavailability note.
         $unavailabilitynote = zoom_get_unavailability_note($zoom, $finished);
 
+        // Show recordings section if option enabled to view recordings.
+        if (!empty($config->viewrecordings)) {
+            $recordings = $service->get_recording_url_list($zoom->meeting_id);
+            foreach($recordings as $recording) {
+                if (isset($recording[0]) && isset($recording[0]->url)) {
+                    $recordinghtml = null;
+                    $recordingaddurl = $recording[0]->url;
+                    $recordingaddbutton = html_writer::div(get_string('recordingview', 'mod_zoom'), 'btn btn-primary mt-3');
+                    $recordingaddbuttonhtml = html_writer::link($recordingaddurl, $recordingaddbutton, array('target' => '_blank'));
+                    $recordingaddhtml = html_writer::div($recordingaddbuttonhtml);
+                    $unavailabilitynote .= $recordingaddhtml;
+                }
+            }
+        }
+
         // Show unavailability note.
         // Ideally, this would use $OUTPUT->notification(), but this renderer adds a close icon to the notification which does not
         // make sense here. So we build the notification manually.
@@ -236,6 +251,7 @@ $table->align = array('center', 'left');
 $table->size = array('35%', '65%');
 $numcolumns = 2;
 
+
 // Show start/end date or recurring meeting information.
 if ($isrecurringnotime) {
     $table->data[] = array(get_string('recurringmeeting', 'mod_zoom'), get_string('recurringmeetingexplanation', 'mod_zoom'));
@@ -255,23 +271,30 @@ if ($isrecurringnotime) {
 
 // Show recordings section if option enabled to view recordings.
 if (!empty($config->viewrecordings)) {
-    $recordinghtml = null;
-    $recordingaddurl = new moodle_url('/mod/zoom/recordings.php', array('id' => $cm->id));
-    $recordingaddbutton = html_writer::div(get_string('recordingview', 'mod_zoom'), 'btn btn-primary');
-    $recordingaddbuttonhtml = html_writer::link($recordingaddurl, $recordingaddbutton, array('target' => '_blank'));
-    $recordingaddhtml = html_writer::div($recordingaddbuttonhtml);
-    $recordinghtml .= $recordingaddhtml;
+    $recordings = $service->get_recording_url_list($zoom->meeting_id);
+    foreach($recordings as $recording) {
+        if (isset($recording[0]) && isset($recording[0]->url)) {
+            $recordinghtml = null;
+            $recordingaddurl = $recording[0]->url;
+            $recordingaddbutton = html_writer::div(get_string('recordingview', 'mod_zoom'), 'btn btn-primary');
+            $recordingaddbuttonhtml = html_writer::link($recordingaddurl, $recordingaddbutton, array('target' => '_blank'));
+            $recordingaddhtml = html_writer::div($recordingaddbuttonhtml);
+            $recordinghtml .= $recordingaddhtml;
 
-    $table->data[] = array(get_string('recordings', 'mod_zoom'), $recordinghtml);
+            $table->data[] = array(get_string('recordings', 'mod_zoom'), $recordinghtml);
+        }
+    }
 }
 
-// Display add-to-calendar button if meeting was found and isn't recurring and if the admin did not disable the feature.
-if ($config->showdownloadical != ZOOM_DOWNLOADICAL_DISABLE && !$showrecreate && !$isrecurringnotime) {
-    $icallink = new moodle_url('/mod/zoom/exportical.php', array('id' => $cm->id));
-    $calendaricon = $OUTPUT->pix_icon('i/calendar', get_string('calendariconalt', 'mod_zoom'));
-    $calendarbutton = html_writer::div($calendaricon . ' ' . get_string('downloadical', 'mod_zoom'), 'btn btn-primary');
-    $buttonhtml = html_writer::link((string) $icallink, $calendarbutton, array('target' => '_blank'));
-    $table->data[] = array(get_string('addtocalendar', 'mod_zoom'), $buttonhtml);
+if ($iszoommanager) {
+    // Display add-to-calendar button if meeting was found and isn't recurring and if the admin did not disable the feature.
+    if ($config->showdownloadical != ZOOM_DOWNLOADICAL_DISABLE && !$showrecreate && !$isrecurringnotime) {
+        $icallink = new moodle_url('/mod/zoom/exportical.php', array('id' => $cm->id));
+        $calendaricon = $OUTPUT->pix_icon('i/calendar', get_string('calendariconalt', 'mod_zoom'));
+        $calendarbutton = html_writer::div($calendaricon . ' ' . get_string('downloadical', 'mod_zoom'), 'btn btn-primary');
+        $buttonhtml = html_writer::link((string) $icallink, $calendarbutton, array('target' => '_blank'));
+        $table->data[] = array(get_string('addtocalendar', 'mod_zoom'), $buttonhtml);
+    }
 }
 
 // Show meeting status.
@@ -289,7 +312,7 @@ if ($zoom->exists_on_zoom == ZOOM_MEETING_EXPIRED) {
 }
 
 // Show host.
-if ($hostuser) {
+if ($iszoommanager && $hostuser) {
     $table->data[] = array($strhost, fullname($hostmoodleuser));
 }
 
@@ -348,107 +371,112 @@ if ($iszoommanager) {
 // Output table.
 echo html_writer::table($table);
 
-// Output "Security" heading.
-echo $OUTPUT->heading(get_string('security', 'mod_zoom'), 3);
+if ($iszoommanager) {
+    // Output "Security" heading.
+    echo $OUTPUT->heading(get_string('security', 'mod_zoom'), 3);
 
-// Start "Security" table.
-$table = new html_table();
-$table->attributes['class'] = 'generaltable mod_view';
-$table->align = array('center', 'left');
-$table->size = array('35%', '65%');
-$numcolumns = 2;
+    // Start "Security" table.
+    $table = new html_table();
+    $table->attributes['class'] = 'generaltable mod_view';
+    $table->align = array('center', 'left');
+    $table->size = array('35%', '65%');
+    $numcolumns = 2;
 
-// Get passcode information.
-$haspassword = (isset($zoom->password) && $zoom->password !== '');
-$strhaspass = ($haspassword) ? $stryes : $strno;
-$canviewjoinurl = ($userishost || has_capability('mod/zoom:viewjoinurl', $context));
+    // Get passcode information.
+    $haspassword = (isset($zoom->password) && $zoom->password !== '');
+    $strhaspass = ($haspassword) ? $stryes : $strno;
+    $canviewjoinurl = ($userishost || has_capability('mod/zoom:viewjoinurl', $context));
 
-// Show passcode status.
-$table->data[] = array($strpassprotect, $strhaspass);
+    // Show passcode status.
+    $table->data[] = array($strpassprotect, $strhaspass);
 
-// Show passcode.
-if ($haspassword && ($canviewjoinurl || get_config('zoom', 'displaypassword'))) {
-    $table->data[] = array($strpassword, $zoom->password);
-}
-
-// Show join link.
-if ($canviewjoinurl) {
-    $table->data[] = array($strjoinlink, html_writer::link($zoom->join_url, $zoom->join_url, array('target' => '_blank')));
-}
-
-// Show encryption type.
-if (!$zoom->webinar) {
-    if ($config->showencryptiontype != ZOOM_ENCRYPTION_DISABLE) {
-        $strenc = ($zoom->option_encryption_type === ZOOM_ENCRYPTION_TYPE_E2EE) ? $strencryptionendtoend : $strencryptionenhanced;
-        $table->data[] = array($strencryption, $strenc);
+    // Show passcode.
+    if ($haspassword && ($canviewjoinurl || get_config('zoom', 'displaypassword'))) {
+        $table->data[] = array($strpassword, $zoom->password);
     }
-}
 
-// Show waiting room.
-if (!$zoom->webinar) {
-    $strwr = ($zoom->option_waiting_room) ? $stryes : $strno;
-    $table->data[] = array($strwwaitingroom, $strwr);
-}
-
-// Show join before host.
-if (!$zoom->webinar) {
-    $strjbh = ($zoom->option_jbh) ? $stryes : $strno;
-    $table->data[] = array($strjoinbeforehost, $strjbh);
-}
-
-// Show authentication.
-$table->data[] = array($strauthenticatedusers, ($zoom->option_authenticated_users) ? $stryes : $strno);
-
-// Output table.
-echo html_writer::table($table);
-
-// Output "Media" heading.
-echo $OUTPUT->heading(get_string('media', 'mod_zoom'), 3);
-
-// Start "Media" table.
-$table = new html_table();
-$table->attributes['class'] = 'generaltable mod_view';
-$table->align = array('center', 'left');
-$table->size = array('35%', '65%');
-$numcolumns = 2;
-
-// Show host video.
-if (!$zoom->webinar) {
-    $strvideohost = ($zoom->option_host_video) ? $stryes : $strno;
-    $table->data[] = array($strstartvideohost, $strvideohost);
-}
-
-// Show participants video.
-if (!$zoom->webinar) {
-    $strparticipantsvideo = ($zoom->option_participants_video) ? $stryes : $strno;
-    $table->data[] = array($strstartvideopart, $strparticipantsvideo);
-}
-
-// Show audio options.
-$table->data[] = array($straudioopt, get_string('audio_' . $zoom->option_audio, 'mod_zoom'));
-
-// Show audio default configuration.
-$table->data[] = array($strmuteuponentry, ($zoom->option_mute_upon_entry) ? $stryes : $strno);
-
-// Show dial-in information.
-if (!$showrecreate
-        && ($zoom->option_audio === ZOOM_AUDIO_BOTH || $zoom->option_audio === ZOOM_AUDIO_TELEPHONY)
-        && ($userishost || has_capability('mod/zoom:viewdialin', $context))) {
-    // Get meeting invitation from Zoom.
-    $meetinginvite = $service->get_meeting_invitation($zoom)->get_display_string($cm->id);
-    // Show meeting invitation if there is any.
-    if (!empty($meetinginvite)) {
-        $meetinginvitetext = str_replace("\r\n", '<br/>', $meetinginvite);
-        $showbutton = html_writer::tag('button', $strmeetinginviteshow,
-                array('id' => 'show-more-button', 'class' => 'btn btn-link pt-0 pl-0'));
-        $meetinginvitebody = html_writer::div($meetinginvitetext, '',
-                array('id' => 'show-more-body', 'style' => 'display: none;'));
-        $table->data[] = array($strmeetinginvite, html_writer::div($showbutton . $meetinginvitebody, ''));
+    // Show join link.
+    if ($canviewjoinurl) {
+        $table->data[] = array($strjoinlink, html_writer::link($zoom->join_url, $zoom->join_url, array('target' => '_blank')));
     }
+
+    // Show encryption type.
+    if (!$zoom->webinar) {
+        if ($config->showencryptiontype != ZOOM_ENCRYPTION_DISABLE) {
+            $strenc = ($zoom->option_encryption_type === ZOOM_ENCRYPTION_TYPE_E2EE) ? $strencryptionendtoend : $strencryptionenhanced;
+            $table->data[] = array($strencryption, $strenc);
+        }
+    }
+
+    // Show waiting room.
+    if (!$zoom->webinar) {
+        $strwr = ($zoom->option_waiting_room) ? $stryes : $strno;
+        $table->data[] = array($strwwaitingroom, $strwr);
+    }
+
+    // Show join before host.
+    if (!$zoom->webinar) {
+        $strjbh = ($zoom->option_jbh) ? $stryes : $strno;
+        $table->data[] = array($strjoinbeforehost, $strjbh);
+    }
+
+    // Show authentication.
+    $table->data[] = array($strauthenticatedusers, ($zoom->option_authenticated_users) ? $stryes : $strno);
+
+    // Output table.
+    echo html_writer::table($table);
 }
 
-// Output table.
-echo html_writer::table($table);
+if ($iszoommanager) {
+    // Output "Media" heading.
+    echo $OUTPUT->heading(get_string('media', 'mod_zoom'), 3);
+
+    // Start "Media" table.
+    $table = new html_table();
+    $table->attributes['class'] = 'generaltable mod_view';
+    $table->align = array('center', 'left');
+    $table->size = array('35%', '65%');
+    $numcolumns = 2;
+
+
+    // Show host video.
+    if (!$zoom->webinar) {
+        $strvideohost = ($zoom->option_host_video) ? $stryes : $strno;
+        $table->data[] = array($strstartvideohost, $strvideohost);
+    }
+
+    // Show participants video.
+    if (!$zoom->webinar) {
+        $strparticipantsvideo = ($zoom->option_participants_video) ? $stryes : $strno;
+        $table->data[] = array($strstartvideopart, $strparticipantsvideo);
+    }
+
+    // Show audio options.
+    $table->data[] = array($straudioopt, get_string('audio_' . $zoom->option_audio, 'mod_zoom'));
+
+    // Show audio default configuration.
+    $table->data[] = array($strmuteuponentry, ($zoom->option_mute_upon_entry) ? $stryes : $strno);
+
+    // Show dial-in information.
+    if (!$showrecreate
+            && ($zoom->option_audio === ZOOM_AUDIO_BOTH || $zoom->option_audio === ZOOM_AUDIO_TELEPHONY)
+            && ($userishost || has_capability('mod/zoom:viewdialin', $context))) {
+        // Get meeting invitation from Zoom.
+        $meetinginvite = $service->get_meeting_invitation($zoom)->get_display_string($cm->id);
+        // Show meeting invitation if there is any.
+        if (!empty($meetinginvite)) {
+            $meetinginvitetext = str_replace("\r\n", '<br/>', $meetinginvite);
+            $showbutton = html_writer::tag('button', $strmeetinginviteshow,
+                    array('id' => 'show-more-button', 'class' => 'btn btn-link pt-0 pl-0'));
+            $meetinginvitebody = html_writer::div($meetinginvitetext, '',
+                    array('id' => 'show-more-body', 'style' => 'display: none;'));
+            $table->data[] = array($strmeetinginvite, html_writer::div($showbutton . $meetinginvitebody, ''));
+        }
+    }
+
+    // Output table.
+    echo html_writer::table($table);
+}
 
 // Supplementary feature: All meetings link.
 // Only show if the admin did not disable this feature completely.
