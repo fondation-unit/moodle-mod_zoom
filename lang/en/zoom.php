@@ -360,3 +360,4 @@ $string['zoom:refreshsessions'] = 'Refresh Zoom meeting reports';
 $string['zoom:view'] = 'View Zoom meetings';
 $string['zoom:viewdialin'] = 'View Zoom dial-in information';
 $string['zoom:viewjoinurl'] = 'View Zoom join url';
+$string['meetingscalendar'] = 'Meetings calendar';
