@@ -216,6 +216,21 @@ if (!$showrecreate) {
         // Get unavailability note.
         $unavailabilitynote = zoom_get_unavailability_note($zoom, $finished);
 
+        // Show recordings section if option enabled to view recordings.
+        if (!empty($config->viewrecordings)) {
+            $recordings = $service->get_recording_url_list($zoom->meeting_id);
+            foreach($recordings as $recording) {
+                if (isset($recording[0]) && isset($recording[0]->url)) {
+                    $recordinghtml = null;
+                    $recordingaddurl = $recording[0]->url;
+                    $recordingaddbutton = html_writer::div(get_string('recordingview', 'mod_zoom'), 'btn btn-primary mt-3');
+                    $recordingaddbuttonhtml = html_writer::link($recordingaddurl, $recordingaddbutton, array('target' => '_blank'));
+                    $recordingaddhtml = html_writer::div($recordingaddbuttonhtml);
+                    $unavailabilitynote .= $recordingaddhtml;
+                }
+            }
+        }
+
         // Show unavailability note.
         // Ideally, this would use $OUTPUT->notification(), but this renderer adds a close icon to the notification which does not
         // make sense here. So we build the notification manually.
@@ -236,6 +251,7 @@ $table->align = array('center', 'left');
 $table->size = array('35%', '65%');
 $numcolumns = 2;
 
+
 // Show start/end date or recurring meeting information.
 if ($isrecurringnotime) {
     $table->data[] = array(get_string('recurringmeeting', 'mod_zoom'), get_string('recurringmeetingexplanation', 'mod_zoom'));
@@ -255,23 +271,30 @@ if ($isrecurringnotime) {
 
 // Show recordings section if option enabled to view recordings.
 if (!empty($config->viewrecordings)) {
-    $recordinghtml = null;
-    $recordingaddurl = new moodle_url('/mod/zoom/recordings.php', array('id' => $cm->id));
-    $recordingaddbutton = html_writer::div(get_string('recordingview', 'mod_zoom'), 'btn btn-primary');
-    $recordingaddbuttonhtml = html_writer::link($recordingaddurl, $recordingaddbutton, array('target' => '_blank'));
-    $recordingaddhtml = html_writer::div($recordingaddbuttonhtml);
-    $recordinghtml .= $recordingaddhtml;
+    $recordings = $service->get_recording_url_list($zoom->meeting_id);
+    foreach($recordings as $recording) {
+        if (isset($recording[0]) && isset($recording[0]->url)) {
+            $recordinghtml = null;
+            $recordingaddurl = $recording[0]->url;
+            $recordingaddbutton = html_writer::div(get_string('recordingview', 'mod_zoom'), 'btn btn-primary');
+            $recordingaddbuttonhtml = html_writer::link($recordingaddurl, $recordingaddbutton, array('target' => '_blank'));
+            $recordingaddhtml = html_writer::div($recordingaddbuttonhtml);
+            $recordinghtml .= $recordingaddhtml;
 
-    $table->data[] = array(get_string('recordings', 'mod_zoom'), $recordinghtml);
+            $table->data[] = array(get_string('recordings', 'mod_zoom'), $recordinghtml);
+        }
+    }
 }
 
-// Display add-to-calendar button if meeting was found and isn't recurring and if the admin did not disable the feature.
-if ($config->showdownloadical != ZOOM_DOWNLOADICAL_DISABLE && !$showrecreate && !$isrecurringnotime) {
-    $icallink = new moodle_url('/mod/zoom/exportical.php', array('id' => $cm->id));
-    $calendaricon = $OUTPUT->pix_icon('i/calendar', get_string('calendariconalt', 'mod_zoom'));
-    $calendarbutton = html_writer::div($calendaricon . ' ' . get_string('downloadical', 'mod_zoom'), 'btn btn-primary');
-    $buttonhtml = html_writer::link((string) $icallink, $calendarbutton, array('target' => '_blank'));
-    $table->data[] = array(get_string('addtocalendar', 'mod_zoom'), $buttonhtml);
+if ($iszoommanager) {
+    // Display add-to-calendar button if meeting was found and isn't recurring and if the admin did not disable the feature.
+    if ($config->showdownloadical != ZOOM_DOWNLOADICAL_DISABLE && !$showrecreate && !$isrecurringnotime) {
+        $icallink = new moodle_url('/mod/zoom/exportical.php', array('id' => $cm->id));
+        $calendaricon = $OUTPUT->pix_icon('i/calendar', get_string('calendariconalt', 'mod_zoom'));
+        $calendarbutton = html_writer::div($calendaricon . ' ' . get_string('downloadical', 'mod_zoom'), 'btn btn-primary');
+        $buttonhtml = html_writer::link((string) $icallink, $calendarbutton, array('target' => '_blank'));
+        $table->data[] = array(get_string('addtocalendar', 'mod_zoom'), $buttonhtml);
+    }
 }
 
 // Show meeting status.
@@ -289,7 +312,7 @@ if ($zoom->exists_on_zoom == ZOOM_MEETING_EXPIRED) {
 }
 
 // Show host.
-if ($hostuser) {
+if ($iszoommanager && $hostuser) {
     $table->data[] = array($strhost, fullname($hostmoodleuser));
 }
 
