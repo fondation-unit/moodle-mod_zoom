@@ -1275,7 +1275,7 @@ function is_available($start_time, $duration, $userid) {
     $endtime = $start_time + $duration + 900;
     $others = $DB->count_records_sql('SELECT COUNT(*) FROM {zoom} WHERE user_id <> ? AND start_time BETWEEN ? AND ? ;', array($userid, $starttime, $endtime));
     
-    if ($others > 3) {
+    if ($others > 1) {
         return false;
     }
     return true;
