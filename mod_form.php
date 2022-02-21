@@ -710,6 +710,10 @@ class mod_zoom_mod_form extends moodleform_mod {
             }
         }
 
+        if (!is_available($data['start_time'], $data['duration'])) {
+            $errors['start_time'] = get_string('too_many_zooms', 'mod_zoom');
+        }
+
         require_once($CFG->dirroot.'/mod/zoom/classes/webservice.php');
         $service = new mod_zoom_webservice();
 

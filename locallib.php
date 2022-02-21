@@ -1268,15 +1268,30 @@ function get_allowed_email($useremail) {
     return false;
 }
 
-function is_available($start_time, $duration, $userid) {
-    global $DB;
+function is_available($start_time, $duration) {
+    global $DB, $USER;
 
+    $config = get_config('mod_zoom');
     $starttime = $start_time - 900;
     $endtime = $start_time + $duration + 900;
-    $others = $DB->count_records_sql('SELECT COUNT(*) FROM {zoom} WHERE user_id <> ? AND start_time BETWEEN ? AND ? ;', array($userid, $starttime, $endtime));
-    
-    if ($others > 3) {
-        return false;
+    $others = $DB->count_records_sql('SELECT COUNT(*) FROM {zoom} WHERE start_time BETWEEN ? AND ? ;', array($starttime, $endtime));
+    $usergroup = get_allowed_email($USER->email);
+
+    if ($others > 0) {
+        $zooms = $DB->get_records_sql('SELECT {zoom}.id, {user}.email 
+                                        FROM {zoom} 
+                                        INNER JOIN mdl_user 
+                                        ON {user}.id = {zoom}.user_id
+                                        WHERE start_time BETWEEN ? AND ? ;', array($starttime, $endtime));
+        foreach($zooms as $zoominstance) {
+            echo "<br><br><br><br><br><br>";
+            var_dump($usergroup);
+            var_dump($zoominstance->id . " " .$zoominstance->email);
+            var_dump(get_allowed_email($zoominstance->email));
+            if ($usergroup == get_allowed_email($zoominstance->email)) {
+                return false;
+            }
+        }
     }
     return true;
 }

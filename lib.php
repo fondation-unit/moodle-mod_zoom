@@ -63,7 +63,7 @@ function zoom_supports($feature) {
  * @return int The id of the newly inserted zoom record
  */
 function zoom_add_instance(stdClass $zoom, mod_zoom_mod_form $mform = null) {
-    global $CFG, $DB;
+    global $CFG, $DB, $USER;
     require_once($CFG->dirroot.'/mod/zoom/classes/webservice.php');
     $service = new mod_zoom_webservice();
 
@@ -111,6 +111,7 @@ function zoom_add_instance(stdClass $zoom, mod_zoom_mod_form $mform = null) {
         throw new moodle_exception('erroraddinstance', 'zoom', $redirecturl->out());
     }
 
+    $zoom->user_id = $USER->id; // add the user id
     $zoom->id = $DB->insert_record('zoom', $zoom);
 
     // Store tracking field data for meeting.
