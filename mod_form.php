@@ -710,7 +710,7 @@ class mod_zoom_mod_form extends moodleform_mod {
             }
         }
 
-        if (!is_available($data['start_time'], $data['duration'], $USER->id)) {
+        if (!is_available($data['start_time'], $data['duration'])) {
             $errors['start_time'] = get_string('too_many_zooms', 'mod_zoom');
         }
 
