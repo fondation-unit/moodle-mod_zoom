@@ -723,8 +723,46 @@ function xmldb_zoom_upgrade($oldversion) {
             $dbman->add_field($table, $field);
         }
 
-        // Zoom savepoint reached.
         upgrade_mod_savepoint(true, 2022022206, 'zoom');
+    }
+
+    if ($oldversion < 2022022400) {
+
+        // Change the recordings_visible_default field in the zoom table.
+        $table = new xmldb_table('zoom');
+        $field = new xmldb_field('recordings_visible_default', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '1',
+                'alternative_hosts');
+        $dbman->change_field_default($table, $field);
+
+        // Change the showrecording field in the zoom table.
+        $table = new xmldb_table('zoom_meeting_recordings');
+        $field = new xmldb_field('showrecording', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $dbman->change_field_default($table, $field);
+
+        // Zoom savepoint reached.
+        upgrade_mod_savepoint(true, 2022022400, 'zoom');
+    }
+
+    if ($oldversion < 2022031600) {
+
+        $table = new xmldb_table('zoom');
+
+        // Define and conditionally add field show_schedule.
+        $field = new xmldb_field('show_schedule', XMLDB_TYPE_INTEGER, '1', null, null, null, '1', 'recordings_visible_default');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define and conditionally add field show_security.
+        $field = new xmldb_field('show_security', XMLDB_TYPE_INTEGER, '1', null, null, null, '1', 'show_schedule');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define and conditionally add field show_media.
+        $field = new xmldb_field('show_media', XMLDB_TYPE_INTEGER, '1', null, null, null, '1', 'show_security');
+
+        upgrade_mod_savepoint(true, 2022031600, 'zoom');
     }
 
     return true;
