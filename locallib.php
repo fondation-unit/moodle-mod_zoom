@@ -1284,10 +1284,6 @@ function is_available($start_time, $duration) {
                                         ON {user}.id = {zoom}.user_id
                                         WHERE start_time BETWEEN ? AND ? ;', array($starttime, $endtime));
         foreach($zooms as $zoominstance) {
-            echo "<br><br><br><br><br><br>";
-            var_dump($usergroup);
-            var_dump($zoominstance->id . " " .$zoominstance->email);
-            var_dump(get_allowed_email($zoominstance->email));
             if ($usergroup == get_allowed_email($zoominstance->email)) {
                 return false;
             }
