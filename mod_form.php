@@ -43,12 +43,13 @@ class mod_zoom_mod_form extends moodleform_mod {
         global $PAGE, $USER;
         $config = get_config('zoom');
         $PAGE->requires->js_call_amd("mod_zoom/form", 'init');
-        $zoomapiidentifier = zoom_get_api_identifier($USER);
 
         $isnew = empty($this->_cm);
-
         $service = new mod_zoom_webservice();
-        $zoomuser = $service->get_user($zoomapiidentifier);
+        //$zoomapiidentifier = zoom_get_api_identifier($USER);
+        //$zoomuser = $service->get_user($zoomapiidentifier);
+        $email = get_allowed_email($USER->email);
+        $zoomuser = $service->get_user($email);
 
         // If creating a new instance, but the Zoom user does not exist.
         if ($isnew && $zoomuser === false) {
